@@ -1,3 +1,6 @@
+"""
+Code from https://deepgram.com/learn/python-speech-recognition-locally-torchaudio
+"""
 import torch
 import torch.multiprocessing as mp
 import torchaudio
