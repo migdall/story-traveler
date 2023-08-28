@@ -3,8 +3,13 @@ from chromadb.config import Settings
 import os
 import chromadb
 from chromadb.utils import embedding_functions
+from chromadb.api.models.Collection import Collection
 import openai
 import uuid
+from collections.abc import Sequence
+import json
+import curses
+from curses import wrapper
 
 from utils import synopsis_explanation
 
@@ -40,26 +45,43 @@ def insert_data(story_name: str):
                 client.insert(f.read())  # TODO: Fix this
 
 
+def get_story_settings(story_name: str) -> dict:
+    story_settings = {}
+    for file in os.listdir(f"stories/{story_name}"):
+        if file.endswith(".json"):
+            with open(f"stories/{story_name}/{file}", "r") as f:
+                data = json.load(f)
+                story_settings = data
+    return story_settings
+
+
 def prompt_for_story_outline(story_name: str):
     # Prompt openai for story outline using embeddings
     # TODO: Implement
     return ""
 
 
-def prompt_for_story_synopsis(story_name: str):
-    # Prompt openai for story outline using embeddings
-    story_name = story_name.replace("_", " ").lower()
-    collection = client.get_collection(
-        name=story_name, embedding_function=openai_ef)
+def prompt_for_story_synopsis(collection: Collection, story_title: str) -> str:
+    """ Ask for story synopsis """
+    print(
+        f"Enter a story synopsis for {story_title}: \n {synopsis_explanation}")
 
-    # Ask for story synopsis
-    print(f"Enter a story synopsis: \n {synopsis_explanation}")
-    user_input = input("Enter a story synopsis: ")
+    # Loop until user states they are happy with the synopsis
+    while True:
+        user_input = input("Enter a story synopsis: ")
+        print(f"Your synopsis: {user_input}")
+        user_input = input(
+            "Are you happy with this synopsis? (y/n): ")
+        if user_input == "y":
+            break
+        elif user_input == "n":
+            user_input = input("Enter a story synopsis: ")
+        else:
+            print("Invalid input. Please try again.")
+    return user_input
 
-    return ""
 
-
-def get_embedding(text, model="text-embedding-ada-002"):
+def get_embedding(text, model="text-embedding-ada-002") -> list:
     text = text.replace("\n", " ")
     return openai.Embedding.create(input=[text], model=model)['data'][0]['embedding']
 
@@ -82,7 +104,6 @@ def create_new_story():
             documents=[original_story_name],
             metadatas=[{"story_title": original_story_name}]
         )
-        # print(new_collection.peek())
 
 
 def delete_story():
@@ -98,16 +119,59 @@ def delete_story():
             print("Story does not exist")
 
 
-# Have a collection of stories which then lead to a specific collection with documents pertaining to that story
+def display_stories(stdscr, stories: Sequence[Collection]) -> Collection or None:
+    """
+    Display a list of stories and let the user choose one to read.
+    :param stories: A list of dict objects where each dict has 'title' and 'content'.
+    """
+    # Display the list of titles
+    for idx, story in enumerate(stories, 1):
+        stdscr.addstr(f"{idx}. {story.name}\n")
+
+    # Get user choice
+    stdscr.addstr("\nChoose a story number to read (or 0 to exit): ")
+    choice = int(stdscr.getkey())
+    stdscr.addstr(str(choice))
+    stdscr.getkey()
+
+    # Validate the choice
+    while choice < 0 or choice > len(stories):
+        stdscr.addstr("\nInvalid choice. Please try again.\n")
+        stdscr.addstr("\nChoose a story number to read (or 0 to exit): ")
+        choice = int(stdscr.getkey())
+        stdscr.addstr(str(choice))
+        stdscr.getkey()
+
+    # Display the chosen story
+    if choice == 0:
+        return None
+    else:
+        return stories[choice-1]
+
+
+def main(stdscr):
+    current_stories = client.list_collections()
+    stdscr.clear()
+    stdscr.addstr("Welcome to Story Traveler!\n")
+
+    if current_stories and len(current_stories) > 0:
+        stdscr.addstr("\nCurrent stories:\n\n")
+        selected_collection = display_stories(stdscr, current_stories)
+        if selected_collection:
+            stdscr.clear()
+            stdscr.addstr(f"{selected_collection.name} has been selected\n")
+            story_settings = get_story_settings(selected_collection.name)
+            if story_settings["synopsis"] == "":
+                stdscr.addstr("Let's create a synopsis for this story\n")
+                # prompt_for_story_synopsis(
+                #     selected_collection, story_settings["storyTitle"])
+    else:
+        stdscr.addstr("No stories currently exist")
+        # create_new_story()
+
+    stdscr.refresh()
+    stdscr.getch()
 
 
 if __name__ == "__main__":
-    delete_story()
-    current_stories = client.list_collections()
-    if current_stories and len(current_stories) > 0:
-        print("Current stories:")
-        for story in current_stories:
-            print(story.name)
-    else:
-        print("No stories currently exist")
-        create_new_story()
+    wrapper(main)

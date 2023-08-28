@@ -1,4 +1,4 @@
 chromadb
-torch
-torchaudio
+openai
+windows-curses
 sentencepiece
