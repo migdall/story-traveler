@@ -61,24 +61,35 @@ def prompt_for_story_outline(story_name: str):
     return ""
 
 
-def prompt_for_story_synopsis(collection: Collection, story_title: str) -> str:
+def prompt_for_story_synopsis(stdscr, collection: Collection, story_title: str) -> str:
     """ Ask for story synopsis """
-    print(
+    stdscr.addstr(
         f"Enter a story synopsis for {story_title}: \n {synopsis_explanation}")
 
     # Loop until user states they are happy with the synopsis
+    stdscr.addstr("Enter a story synopsis: ")
+    output = ""
     while True:
-        user_input = input("Enter a story synopsis: ")
-        print(f"Your synopsis: {user_input}")
-        user_input = input(
-            "Are you happy with this synopsis? (y/n): ")
-        if user_input == "y":
+        user_input = stdscr.getkey()
+        stdscr.addstr(user_input)
+
+        output += user_input
+
+        if user_input == "\n":
             break
-        elif user_input == "n":
-            user_input = input("Enter a story synopsis: ")
-        else:
-            print("Invalid input. Please try again.")
-    return user_input
+        # stdscr.addstr(f"\n\nYour synopsis: {user_input}\n\n")
+        # stdscr.getch()
+
+        # print(f"Your synopsis: {user_input}")
+        # user_input = stdscr.addstr(
+        #     "Are you happy with this synopsis? (y/n): ")
+        # if user_input == "y":
+        #     break
+        # elif user_input == "n":
+        #     user_input = stdscr.addstr("Enter a story synopsis: ")
+        # else:
+        #     stdscr.addstr("Invalid input. Please try again.")
+    return output
 
 
 def get_embedding(text, model="text-embedding-ada-002") -> list:
@@ -163,8 +174,9 @@ def main(stdscr):
             story_settings = get_story_settings(selected_collection.name)
             if story_settings["synopsis"] == "":
                 stdscr.addstr("Let's create a synopsis for this story\n")
-                # prompt_for_story_synopsis(
-                #     selected_collection, story_settings["storyTitle"])
+                new_synopsis = prompt_for_story_synopsis(stdscr,
+                                                         selected_collection, story_settings["storyTitle"])
+                stdscr.addstr(f"Your synopsis: {new_synopsis}\n")
     else:
         stdscr.addstr("No stories currently exist")
         # create_new_story()
