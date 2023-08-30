@@ -2,3 +2,7 @@ chromadb
 openai
 windows-curses
 sentencepiece
+SpeechRecognition
+openai-whisper
+soundfile
+PyAudio

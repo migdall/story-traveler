@@ -12,10 +12,7 @@ import curses
 from curses import wrapper
 
 from utils import synopsis_explanation
-
-# Load your API key from an environment variable or secret management service
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
+from listener import listen
 
 load_dotenv()  # take environment variables from .env.
 
@@ -69,26 +66,56 @@ def prompt_for_story_synopsis(stdscr, collection: Collection, story_title: str) 
     # Loop until user states they are happy with the synopsis
     stdscr.addstr("Enter a story synopsis: ")
     output = ""
-    while True:
-        user_input = stdscr.getkey()
-        stdscr.addstr(user_input)
+    # Display the options for the user to type or speak
+    stdscr.addstr("\n\nOptions:\n")
+    stdscr.addstr("1. Type\n")
+    stdscr.addstr("2. Speak\n")
 
-        output += user_input
+    # Get user choice
+    stdscr.addstr("Choice: ")
+    choice = int(stdscr.getkey())
+    stdscr.addstr(str(choice))
+    stdscr.getch()
 
-        if user_input == "\n":
-            break
-        # stdscr.addstr(f"\n\nYour synopsis: {user_input}\n\n")
-        # stdscr.getch()
+    if choice == 1:
+        stdscr.addstr("\nType: ")
+        while True:
+            user_input = stdscr.getkey()
+            stdscr.addstr(user_input)
 
-        # print(f"Your synopsis: {user_input}")
-        # user_input = stdscr.addstr(
-        #     "Are you happy with this synopsis? (y/n): ")
-        # if user_input == "y":
-        #     break
-        # elif user_input == "n":
-        #     user_input = stdscr.addstr("Enter a story synopsis: ")
-        # else:
-        #     stdscr.addstr("Invalid input. Please try again.")
+            output += user_input
+
+            if user_input == "\n":
+                break
+    elif choice == 2:
+        stdscr.addstr("\nSpeak")
+        user_satified = False
+        while not user_satified:
+            # Listen for user input
+            audio_gathered, text = listen()
+            if audio_gathered:
+                stdscr.addstr(f"\n\nAudio gathered: {text}")
+                stdscr.addstr("Are you satisfied with this audio? (y/n): ")
+                user_input = stdscr.getkey()
+                stdscr.addstr(user_input)
+                if user_input == "n":
+                    stdscr.addstr(
+                        "\nDo you want to edit the text? (y/n): ")
+                    user_input = stdscr.getkey()
+                    stdscr.addstr(user_input)
+
+                    if user_input == "y":
+                        stdscr.addstr("\nEdit the text: ")
+                        stdscr.addstr(text)
+                        user_input = stdscr.getkey()
+                        stdscr.addstr(user_input)
+                        output += user_input
+                        if user_input == "\n":
+                            break
+                user_satified = True
+                output = text
+            else:
+                stdscr.addstr(f"Error: {text}")
     return output
 
 
@@ -176,7 +203,10 @@ def main(stdscr):
                 stdscr.addstr("Let's create a synopsis for this story\n")
                 new_synopsis = prompt_for_story_synopsis(stdscr,
                                                          selected_collection, story_settings["storyTitle"])
-                stdscr.addstr(f"Your synopsis: {new_synopsis}\n")
+                try:
+                    stdscr.addstr(f"Your synopsis: {new_synopsis}\n")
+                except curses.error:
+                    pass
     else:
         stdscr.addstr("No stories currently exist")
         # create_new_story()
