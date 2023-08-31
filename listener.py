@@ -12,12 +12,13 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
 def listen() -> Tuple[bool, str]:
-    whisper_text = ""
+    whisper_text = "failed to gather audio"
     audio_gathered = False
     r = sr.Recognizer()
     try:
         with sr.Microphone() as source:
-            audio = r.listen(source, timeout=10, phrase_time_limit=20)
+            print("Listening...")
+            audio = r.listen(source, phrase_time_limit=20)
             # Recognize speech using whisper
             try:
                 whisper_text = r.recognize_whisper(
@@ -33,4 +34,4 @@ def listen() -> Tuple[bool, str]:
     except sr.WaitTimeoutError:
         return (False, "Timeout Error")
 
-    return (audio_gathered, "Timeout Error")
+    return (audio_gathered, whisper_text)
