@@ -2,6 +2,7 @@ from functools import partial
 import threading
 from tkinter import *
 from tkinter import ttk
+from tkinter.filedialog import askopenfile
 
 from listener import listen
 
@@ -27,11 +28,25 @@ def get_audio() -> None:
     a_thread.start()
 
 
+def open_file() -> None:
+    file = askopenfile(mode="r", filetypes=[("JSON Files", "*.json")])
+    if file is not None:
+        content = file.read()
+        print(content)
+
+
+menu_bar = Menu(root)
+file_menu = Menu(menu_bar, tearoff=0)
+file_menu.add_command(label="Open", command=partial(open_file))
+file_menu.add_command(label="Quit", command=root.destroy)
+
+menu_bar.add_cascade(label="File", menu=file_menu)
+root.config(menu=menu_bar)
+
 ttk.Label(frm, text="Talk about a character").grid(column=0, row=0)
 speak_button = ttk.Button(frm, text="Speak", command=partial(
     get_audio))
 speak_button.grid(column=1, row=0)
-ttk.Button(frm, text="Quit", command=root.destroy).grid(column=0, row=1)
 chtext = Text(frm, width=40, height=10)
 chtext.grid(column=0, row=2, columnspan=2)
 
