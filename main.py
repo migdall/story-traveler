@@ -8,8 +8,11 @@ import openai
 import uuid
 from collections.abc import Sequence
 import json
-import curses
-from curses import wrapper
+from functools import partial
+import threading
+from tkinter import *
+from tkinter import ttk
+from tkinter.filedialog import askopenfile
 
 from utils import synopsis_explanation
 from listener import listen
@@ -58,67 +61,6 @@ def prompt_for_story_outline(story_name: str):
     return ""
 
 
-def prompt_for_story_synopsis(stdscr, collection: Collection, story_title: str) -> str:
-    """ Ask for story synopsis """
-    stdscr.addstr(
-        f"Enter a story synopsis for {story_title}: \n {synopsis_explanation}")
-
-    # Loop until user states they are happy with the synopsis
-    stdscr.addstr("Enter a story synopsis: ")
-    output = ""
-    # Display the options for the user to type or speak
-    stdscr.addstr("\n\nOptions:\n")
-    stdscr.addstr("1. Type\n")
-    stdscr.addstr("2. Speak\n")
-
-    # Get user choice
-    stdscr.addstr("Choice: ")
-    choice = int(stdscr.getkey())
-    stdscr.addstr(str(choice))
-    stdscr.getch()
-
-    if choice == 1:
-        stdscr.addstr("\nType: ")
-        while True:
-            user_input = stdscr.getkey()
-            stdscr.addstr(user_input)
-
-            output += user_input
-
-            if user_input == "\n":
-                break
-    elif choice == 2:
-        stdscr.addstr("\nSpeak")
-        user_satified = False
-        while not user_satified:
-            # Listen for user input
-            audio_gathered, text = listen()
-            if audio_gathered:
-                stdscr.addstr(f"\n\nAudio gathered: {text}")
-                stdscr.addstr("Are you satisfied with this audio? (y/n): ")
-                user_input = stdscr.getkey()
-                stdscr.addstr(user_input)
-                if user_input == "n":
-                    stdscr.addstr(
-                        "\nDo you want to edit the text? (y/n): ")
-                    user_input = stdscr.getkey()
-                    stdscr.addstr(user_input)
-
-                    if user_input == "y":
-                        stdscr.addstr("\nEdit the text: ")
-                        stdscr.addstr(text)
-                        user_input = stdscr.getkey()
-                        stdscr.addstr(user_input)
-                        output += user_input
-                        if user_input == "\n":
-                            break
-                user_satified = True
-                output = text
-            else:
-                stdscr.addstr(f"Error: {text}")
-    return output
-
-
 def get_embedding(text, model="text-embedding-ada-002") -> list:
     text = text.replace("\n", " ")
     return openai.Embedding.create(input=[text], model=model)['data'][0]['embedding']
@@ -157,63 +99,53 @@ def delete_story():
             print("Story does not exist")
 
 
-def display_stories(stdscr, stories: Sequence[Collection]) -> Collection or None:
-    """
-    Display a list of stories and let the user choose one to read.
-    :param stories: A list of dict objects where each dict has 'title' and 'content'.
-    """
-    # Display the list of titles
-    for idx, story in enumerate(stories, 1):
-        stdscr.addstr(f"{idx}. {story.name}\n")
+root = Tk()
+root.title("Story Traveler")
+root.resizable(True, True)
+root.geometry("800x600")
 
-    # Get user choice
-    stdscr.addstr("\nChoose a story number to read (or 0 to exit): ")
-    choice = int(stdscr.getkey())
-    stdscr.addstr(str(choice))
-    stdscr.getkey()
-
-    # Validate the choice
-    while choice < 0 or choice > len(stories):
-        stdscr.addstr("\nInvalid choice. Please try again.\n")
-        stdscr.addstr("\nChoose a story number to read (or 0 to exit): ")
-        choice = int(stdscr.getkey())
-        stdscr.addstr(str(choice))
-        stdscr.getkey()
-
-    # Display the chosen story
-    if choice == 0:
-        return None
-    else:
-        return stories[choice-1]
+frm = ttk.Frame(root, padding=10)
+frm.grid()
 
 
-def main(stdscr):
-    current_stories = client.list_collections()
-    stdscr.clear()
-    stdscr.addstr("Welcome to Story Traveler!\n")
+def get_audio() -> None:
+    def callback():
+        speak_button.configure(state="disabled")
+        audio_gathered, audio_text = listen()
+        print(audio_gathered)
+        if audio_gathered:
+            chtext.insert(END, audio_text)
+        speak_button.configure(state="enabled")
+    a_thread = threading.Thread(target=callback)
+    a_thread.start()
 
-    if current_stories and len(current_stories) > 0:
-        stdscr.addstr("\nCurrent stories:\n\n")
-        selected_collection = display_stories(stdscr, current_stories)
-        if selected_collection:
-            stdscr.clear()
-            stdscr.addstr(f"{selected_collection.name} has been selected\n")
-            story_settings = get_story_settings(selected_collection.name)
-            if story_settings["synopsis"] == "":
-                stdscr.addstr("Let's create a synopsis for this story\n")
-                new_synopsis = prompt_for_story_synopsis(stdscr,
-                                                         selected_collection, story_settings["storyTitle"])
-                try:
-                    stdscr.addstr(f"Your synopsis: {new_synopsis}\n")
-                except curses.error:
-                    pass
-    else:
-        stdscr.addstr("No stories currently exist")
-        # create_new_story()
 
-    stdscr.refresh()
-    stdscr.getch()
+def open_file() -> None:
+    file = askopenfile(mode="r", filetypes=[("JSON Files", "*.json")])
+    if file is not None:
+        content = file.read()
+        content_dict = json.loads(content)
+        story_title_label.configure(text=content_dict["storyTitle"])
 
+
+menu_bar = Menu(root)
+file_menu = Menu(menu_bar, tearoff=0)
+file_menu.add_command(label="Open", command=partial(open_file))
+file_menu.add_command(label="Quit", command=root.destroy)
+
+menu_bar.add_cascade(label="File", menu=file_menu)
+root.config(menu=menu_bar)
+
+story_title_label = ttk.Label(frm, text="Story title")
+story_title_label.grid(column=0, row=0)
+synopsis_button = ttk.Button(frm, text="Synopsis")
+synopsis_button.grid(column=0, row=1)
+ttk.Label(frm, text="Talk about a character").grid(column=2, row=0)
+speak_button = ttk.Button(frm, text="Speak", command=partial(
+    get_audio))
+speak_button.grid(column=3, row=0)
+chtext = Text(frm, width=40, height=10)
+chtext.grid(column=2, row=2, columnspan=2)
 
 if __name__ == "__main__":
-    wrapper(main)
+    root.mainloop()
