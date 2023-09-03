@@ -1,4 +1,5 @@
 from functools import partial
+import json
 import threading
 from tkinter import *
 from tkinter import ttk
@@ -10,7 +11,7 @@ from listener import listen
 root = Tk()
 root.title("Story Traveler")
 root.resizable(True, True)
-root.geometry("500x500")
+root.geometry("800x600")
 
 frm = ttk.Frame(root, padding=10)
 frm.grid()
@@ -32,7 +33,9 @@ def open_file() -> None:
     file = askopenfile(mode="r", filetypes=[("JSON Files", "*.json")])
     if file is not None:
         content = file.read()
-        print(content)
+        print(type(content))
+        content_dict = json.loads(content)
+        story_title_label.configure(text=content_dict["storyTitle"])
 
 
 menu_bar = Menu(root)
@@ -43,11 +46,15 @@ file_menu.add_command(label="Quit", command=root.destroy)
 menu_bar.add_cascade(label="File", menu=file_menu)
 root.config(menu=menu_bar)
 
-ttk.Label(frm, text="Talk about a character").grid(column=0, row=0)
+story_title_label = ttk.Label(frm, text="Story title")
+story_title_label.grid(column=0, row=0)
+synopsis_button = ttk.Button(frm, text="Synopsis")
+synopsis_button.grid(column=0, row=1)
+ttk.Label(frm, text="Talk about a character").grid(column=2, row=0)
 speak_button = ttk.Button(frm, text="Speak", command=partial(
     get_audio))
-speak_button.grid(column=1, row=0)
+speak_button.grid(column=3, row=0)
 chtext = Text(frm, width=40, height=10)
-chtext.grid(column=0, row=2, columnspan=2)
+chtext.grid(column=2, row=2, columnspan=2)
 
 root.mainloop()
