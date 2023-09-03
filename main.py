@@ -16,6 +16,7 @@ from tkinter.filedialog import askopenfile
 
 from utils import synopsis_explanation
 from listener import listen
+from narratives.models import get_narrative_from_json, NarrativeEncoder
 
 load_dotenv()  # take environment variables from .env.
 
@@ -107,6 +108,33 @@ root.geometry("800x600")
 frm = ttk.Frame(root, padding=10)
 frm.grid()
 
+current_narrative = None
+
+
+def save_story() -> None:
+    global current_narrative
+    if current_narrative is not None:
+        with open(f"stories/{current_narrative.id}/settings.json", "w") as f:
+            json.dump(current_narrative, f, cls=NarrativeEncoder, indent=2)
+            f.write('\n')
+
+
+def save_synopsis() -> None:
+    global current_narrative
+    if current_narrative is not None:
+        current_narrative.synopsis = chtext.get("1.0", END)
+
+
+def save_action() -> None:
+    save_synopsis()
+    save_story()
+
+
+def load_synopsis() -> None:
+    global current_narrative
+    if current_narrative is not None:
+        chtext.insert(END, current_narrative.synopsis)
+
 
 def get_audio() -> None:
     def callback():
@@ -123,9 +151,10 @@ def get_audio() -> None:
 def open_file() -> None:
     file = askopenfile(mode="r", filetypes=[("JSON Files", "*.json")])
     if file is not None:
+        global current_narrative
         content = file.read()
-        content_dict = json.loads(content)
-        story_title_label.configure(text=content_dict["storyTitle"])
+        current_narrative = get_narrative_from_json(content)
+        story_title_label.configure(text=current_narrative.title)
 
 
 menu_bar = Menu(root)
@@ -138,12 +167,22 @@ root.config(menu=menu_bar)
 
 story_title_label = ttk.Label(frm, text="Story title")
 story_title_label.grid(column=0, row=0)
-synopsis_button = ttk.Button(frm, text="Synopsis")
+synopsis_button = ttk.Button(frm, text="Synopsis", command=partial(
+    load_synopsis))
 synopsis_button.grid(column=0, row=1)
-ttk.Label(frm, text="Talk about a character").grid(column=2, row=0)
+
+# Save the current text in the text box to the database and settings file
+# if necessary
+save_button = ttk.Button(frm, text="Save", command=partial(save_action))
+save_button.grid(column=2, row=0)
+
+ttk.Label(frm, text="Talk about a character").grid(column=3, row=0)
 speak_button = ttk.Button(frm, text="Speak", command=partial(
     get_audio))
-speak_button.grid(column=3, row=0)
+speak_button.grid(column=4, row=0)
+
+# Text box for the user to enter text and load text from the database
+# and settings file
 chtext = Text(frm, width=40, height=10)
 chtext.grid(column=2, row=2, columnspan=2)
 
