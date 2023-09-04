@@ -157,38 +157,36 @@ def open_file() -> None:
         story_title_label.configure(text=current_narrative.title)
 
 
-def main():
-    menu_bar = Menu(root)
-    file_menu = Menu(menu_bar, tearoff=0)
-    file_menu.add_command(label="Open", command=partial(open_file))
-    file_menu.add_command(label="Quit", command=root.destroy)
+menu_bar = Menu(root)
+file_menu = Menu(menu_bar, tearoff=0)
+file_menu.add_command(label="Open", command=partial(open_file))
+file_menu.add_command(label="Quit", command=root.destroy)
 
-    menu_bar.add_cascade(label="File", menu=file_menu)
-    root.config(menu=menu_bar)
+menu_bar.add_cascade(label="File", menu=file_menu)
+root.config(menu=menu_bar)
 
-    story_title_label = ttk.Label(frm, text="Story title")
-    story_title_label.grid(column=0, row=0)
-    synopsis_button = ttk.Button(frm, text="Synopsis", command=partial(
-        load_synopsis))
-    synopsis_button.grid(column=0, row=1)
+story_title_label = ttk.Label(frm, text="Story title")
+story_title_label.grid(column=0, row=0)
+synopsis_button = ttk.Button(frm, text="Synopsis", command=partial(
+    load_synopsis))
+synopsis_button.grid(column=0, row=1)
 
-    # Save the current text in the text box to the database and settings file
-    # if necessary
-    save_button = ttk.Button(frm, text="Save", command=partial(save_action))
-    save_button.grid(column=2, row=0)
+# Save the current text in the text box to the database and settings file
+# if necessary
+save_button = ttk.Button(frm, text="Save", command=partial(save_action))
+save_button.grid(column=2, row=0)
 
-    ttk.Label(frm, text="Talk about a character").grid(column=3, row=0)
-    speak_button = ttk.Button(frm, text="Speak", command=partial(
-        get_audio))
-    speak_button.grid(column=4, row=0)
+ttk.Label(frm, text="Talk about a character").grid(column=3, row=0)
+speak_button = ttk.Button(frm, text="Speak", command=partial(
+    get_audio))
+speak_button.grid(column=4, row=0)
 
-    # Text box for the user to enter text and load text from the database
-    # and settings file
-    chtext = Text(frm, width=40, height=10)
-    chtext.grid(column=2, row=2, columnspan=2)
+# Text box for the user to enter text and load text from the database
+# and settings file
+chtext = Text(frm, width=40, height=10)
+chtext.grid(column=2, row=2, columnspan=2)
 
-    root.mainloop()
-
+#
 
 if __name__ == "__main__":
-    main()
+    root.mainloop()
